@@ -1,0 +1,150 @@
+@{
+    ViewData["Title"] = "Sala 2";
+    var mensaje = TempData["Sala2Mensaje"] as string;
+}
+
+<div class="sala2-scene">
+    <div class="text-center mb-4">
+        <h2>Sala 2: La bestia que imita a Zote</h2>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(mensaje))
+    {
+        <div class="alert alert-info mt-3">@mensaje</div>
+    }
+
+    <p class="sala2-intro">
+        Te adentras en la segunda cámara y descubres a un guerrero enorme, imponente, con la figura de <strong>El gran Zote</strong>.
+        Al acercarte, notas que su mirada es demasiado fría y que sus movimientos se vuelven animalescos.
+        No es Zote: es <strong>Nosk</strong>, una bestia cazadora que se mimetiza para atraer a sus víctimas.
+    </p>
+
+    <div class="sala2-combat">
+        <div class="sala2-beast" aria-label="Enemigo Nosk">
+            <div class="sala2-part part-head" data-part="cabeza"></div>
+            <div class="sala2-part part-body" data-part="cuerpo"></div>
+            <div class="sala2-part part-left-arm" data-part="brazo izquierdo"></div>
+            <div class="sala2-part part-right-arm" data-part="brazo derecho"></div>
+            <div class="sala2-part part-left-leg" data-part="pierna izquierda"></div>
+            <div class="sala2-part part-right-leg" data-part="pierna derecha"></div>
+        </div>
+
+        <div class="sala2-panel">
+            <div class="sala2-status">
+                <div class="sala2-bar-wrap">
+                    <span>Nosk</span>
+                    <div class="sala2-bar">
+                        <div id="enemyHpBar" class="sala2-fill enemy"></div>
+                    </div>
+                </div>
+                <div class="sala2-bar-wrap">
+                    <span>Tu energía</span>
+                    <div class="sala2-bar player">
+                        <div id="playerHpBar" class="sala2-fill player"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="combatStatus" class="sala2-status-text">
+                Las extremidades de Nosk se tornan rojas. ¡Tocá la parte adecuada para hacerle daño!
+            </div>
+
+            <div id="nextRoomForm" class="sala2-next-room" style="display: none;">
+                <p>¡Nosk cae! Del humo surge el verdadero Zote, quien te entrega el poder de moverte con más rapidez y fuerza.</p>
+                <form action='@Url.Action("pasarSala", "Home", new { IdSala = 2 })' method="GET">
+                    <input type="submit" value="Entrar a la Sala 3" />
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const parts = document.querySelectorAll('.sala2-part');
+    const enemyHpBar = document.getElementById('enemyHpBar');
+    const playerHpBar = document.getElementById('playerHpBar');
+    const combatStatus = document.getElementById('combatStatus');
+    const nextRoomForm = document.getElementById('nextRoomForm');
+
+    let enemyHp = 100;
+    let playerHp = 100;
+    let attackWindowOpen = false;
+    let victory = false;
+    let activeTimeout = null;
+    let activePart = null;
+
+    function resetParts() {
+        parts.forEach(part => part.classList.remove('active', 'hit'));
+    }
+
+    function triggerEnemyAttack() {
+        if (victory) return;
+
+        resetParts();
+        const randomIndex = Math.floor(Math.random() * parts.length);
+        activePart = parts[randomIndex];
+        activePart.classList.add('active');
+        attackWindowOpen = true;
+        combatStatus.textContent = '¡La extremidad de Nosk se pone roja! Tocala para golpearlo.';
+
+        window.clearTimeout(activeTimeout);
+        activeTimeout = window.setTimeout(() => {
+            if (!victory && attackWindowOpen) {
+                attackWindowOpen = false;
+                resetParts();
+                activePart = null;
+                playerHp = Math.max(0, playerHp - 12);
+                playerHpBar.style.width = playerHp + '%';
+                combatStatus.textContent = 'Nosk contraataca. ¡No dejes que te alcance!';
+
+                if (playerHp <= 0) {
+                    combatStatus.textContent = 'Te derriba la bestia. Inténtalo otra vez.';
+                    parts.forEach(part => part.style.pointerEvents = 'none');
+                    setTimeout(() => location.reload(), 1800);
+                }
+            }
+        }, 650);
+    }
+
+    function doAttack(selectedPart) {
+        if (victory) return;
+
+        if (attackWindowOpen && selectedPart === activePart) {
+            enemyHp = Math.max(0, enemyHp - 20);
+            enemyHpBar.style.width = enemyHp + '%';
+            selectedPart.classList.add('hit');
+            resetParts();
+            attackWindowOpen = false;
+            activePart = null;
+            combatStatus.textContent = '¡Impacto directo! La ferocidad de Nosk empieza a ceder.';
+
+            if (enemyHp <= 0) {
+                victory = true;
+                combatStatus.textContent = '¡Nosk cae! El verdadero Zote aparece y te otorga una nueva habilidad.';
+                nextRoomForm.style.display = 'block';
+            }
+        } else {
+            playerHp = Math.max(0, playerHp - 10);
+            playerHpBar.style.width = playerHp + '%';
+            combatStatus.textContent = 'Fallaste el golpe. Nosk aprovecha la oportunidad.';
+
+            if (playerHp <= 0) {
+                combatStatus.textContent = 'La caza termina contigo. Inténtalo de nuevo.';
+                parts.forEach(part => part.style.pointerEvents = 'none');
+                setTimeout(() => location.reload(), 1800);
+            }
+        }
+    }
+
+    parts.forEach(part => {
+        part.addEventListener('click', () => doAttack(part));
+    });
+
+    enemyHpBar.style.width = enemyHp + '%';
+    playerHpBar.style.width = playerHp + '%';
+    window.setInterval(() => {
+        if (!victory) {
+            triggerEnemyAttack();
+        }
+    }, 1800);
+</script>
