@@ -1,0 +1,219 @@
+@{
+    ViewData["Title"] = "Sala 3 - La Forja del Herrero";
+}
+
+<div class="forge-scene">
+    <div class="text-center mb-4">
+        <h2>La Forja del Herrero</h2>
+    </div>
+
+    <div class="forge-intro">
+        <p>
+            Tras derrotar a Nosk, te diriges al taller del herrero del reino.
+            Tu aguijón se encuentra dañado y debilitado por la batalla.
+            El herrero, con su sabiduría ancestral, te pide que repares y mejores tu arma.
+        </p>
+        <p>
+            <strong>"Debes golpear el aguijón sobre la forja con precisión,"</strong> dice con gravedad.
+            <strong>"Cuando veas la barra de energía en movimiento, golpea en el momento exacto.
+            Repítelo varias veces para forjar adecuadamente tu arma."</strong>
+        </p>
+    </div>
+
+    <div class="forge-container">
+        <!-- Forja Visual -->
+        <div class="forge-area">
+            <div class="forge-fire"></div>
+            <div class="forge-anvil">
+                <div class="nail" id="forgeNail"></div>
+            </div>
+        </div>
+
+        <!-- Panel de Control -->
+        <div class="forge-panel">
+            <div class="forge-status">
+                <h3>Progreso de Forja</h3>
+                <div class="forge-progress-bar">
+                    <div id="forgeProgressFill" class="forge-progress-fill"></div>
+                </div>
+                <span id="forgeProgressText">0/3 golpes</span>
+            </div>
+
+            <div class="timing-bar-container">
+                <label>Zona de Golpe:</label>
+                <div class="timing-bar">
+                    <div id="timingIndicator" class="timing-indicator"></div>
+                    <div id="hitZone" class="hit-zone"></div>
+                </div>
+                <p id="timingMessage" class="timing-message">Prepárate...comenzará en breve</p>
+            </div>
+
+            <button id="strikeButton" class="strike-button" disabled>
+                <span class="button-text">Preparado</span>
+            </button>
+
+            <div id="forgeStatus" class="forge-status-text">
+                Observa la barra de energía...
+            </div>
+
+            <div id="forgeCompleteForm" class="forge-complete" style="display: none;">
+                <p>¡Tu aguijón ha sido forjado a la perfección!</p>
+                <p>El herrero asiente con satisfacción: <strong>"Tu arma está lista. Ahora eres lo suficientemente fuerte para enfrentar lo que viene."</strong></p>
+                <form action='@Url.Action("pasarSala", "Home", new { IdSala = 2 })' method="GET">
+                    <input type="submit" value="Entrar a la Sala 3" />
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const forgeNail = document.getElementById('forgeNail');
+    const strikeButton = document.getElementById('strikeButton');
+    const timingIndicator = document.getElementById('timingIndicator');
+    const hitZone = document.getElementById('hitZone');
+    const timingMessage = document.getElementById('timingMessage');
+    const forgeStatus = document.getElementById('forgeStatus');
+    const forgeProgressFill = document.getElementById('forgeProgressFill');
+    const forgeProgressText = document.getElementById('forgeProgressText');
+    const forgeCompleteForm = document.getElementById('forgeCompleteForm');
+
+    let successfulStrikes = 0;
+    const requiredStrikes = 3;
+    let isForging = false;
+    let indicatorMoving = false;
+    let animationFrameId = null;
+
+    // Iniciar el mini-juego
+    function startForging() {
+        if (isForging || successfulStrikes >= requiredStrikes) return;
+        
+        isForging = true;
+        strikeButton.disabled = true;
+        strikeButton.classList.add('disabled');
+        timingMessage.textContent = '¡Golpea cuando llegues a la zona verde!';
+        forgeStatus.textContent = 'Forjando...';
+        
+        // Mostrar la barra en movimiento
+        moveTimingIndicator();
+    }
+
+    function moveTimingIndicator() {
+        let position = 0;
+        const speed = 2;
+        const duration = 2500; // 2.5 segundos para recorrer
+        const startTime = Date.now();
+        const hitZoneStart = 35; // Zona de golpe comienza al 35%
+        const hitZoneEnd = 65; // Zona de golpe termina al 65%
+
+        const animate = () => {
+            const elapsed = Date.now() - startTime;
+            position = (elapsed / duration) * 100;
+
+            if (position <= 100) {
+                timingIndicator.style.left = position + '%';
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                endForgeAttempt(false);
+            }
+        };
+
+        animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function checkHit() {
+        if (!isForging) return;
+
+        const indicatorPos = parseFloat(timingIndicator.style.left) || 0;
+        const hitZoneStart = 35;
+        const hitZoneEnd = 65;
+
+        if (indicatorPos >= hitZoneStart && indicatorPos <= hitZoneEnd) {
+            endForgeAttempt(true);
+        } else {
+            endForgeAttempt(false);
+        }
+    }
+
+    function endForgeAttempt(success) {
+        isForging = false;
+        cancelAnimationFrame(animationFrameId);
+        strikeButton.disabled = false;
+        strikeButton.classList.remove('disabled');
+
+        if (success) {
+            successfulStrikes++;
+            forgeProgressFill.style.width = (successfulStrikes / requiredStrikes) * 100 + '%';
+            forgeProgressText.textContent = `${successfulStrikes}/${requiredStrikes} golpes`;
+            
+            // Animación de golpe exitoso
+            forgeNail.classList.add('hammered');
+            setTimeout(() => forgeNail.classList.remove('hammered'), 300);
+            
+            forgeStatus.textContent = '¡Golpe exitoso! Tu aguijón brilla.';
+            timingMessage.textContent = '✓ ¡Timing perfecto!';
+            timingMessage.classList.add('success');
+            setTimeout(() => timingMessage.classList.remove('success'), 1000);
+
+            if (successfulStrikes >= requiredStrikes) {
+                forgeCompleted();
+            } else {
+                timingMessage.textContent = `Faltan ${requiredStrikes - successfulStrikes} golpes más`;
+                setTimeout(() => {
+                    timingMessage.textContent = 'Prepárate para el siguiente golpe...';
+                    timingIndicator.style.left = '0%';
+                }, 1500);
+            }
+        } else {
+            forgeStatus.textContent = '¡Fallaste! El golpe no fue lo suficientemente fuerte.';
+            timingMessage.textContent = '✗ Timing incorrecto - Intenta de nuevo';
+            timingMessage.classList.add('error');
+            setTimeout(() => timingMessage.classList.remove('error'), 1000);
+            
+            // Animación de fallo
+            forgeNail.classList.add('failed');
+            setTimeout(() => forgeNail.classList.remove('failed'), 300);
+            
+            setTimeout(() => {
+                timingMessage.textContent = 'Prepárate para intentar de nuevo...';
+                timingIndicator.style.left = '0%';
+            }, 1500);
+        }
+    }
+
+    function forgeCompleted() {
+        strikeButton.disabled = true;
+        strikeButton.classList.add('disabled');
+        forgeStatus.textContent = '¡Tu aguijón ha sido perfectamente forjado!';
+        timingMessage.textContent = '🔥 ¡FORJA COMPLETADA!';
+        timingMessage.classList.add('success');
+        forgeCompleteForm.style.display = 'block';
+        
+        // Efecto de finalización
+        forgeNail.classList.add('perfected');
+    }
+
+    strikeButton.addEventListener('click', () => {
+        if (!isForging && successfulStrikes < requiredStrikes) {
+            startForging();
+        } else if (isForging) {
+            checkHit();
+        }
+    });
+
+    // Permitir golpear con la barra espaciadora también
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            if (!isForging && successfulStrikes < requiredStrikes) {
+                startForging();
+            } else if (isForging) {
+                checkHit();
+            }
+        }
+    });
+
+    // Inicializar UI
+    forgeProgressFill.style.width = '0%';
+    timingIndicator.style.left = '0%';
+</script>

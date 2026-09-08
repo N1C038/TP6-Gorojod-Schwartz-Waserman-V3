@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+@{
+    ViewData["Title"] = "Historia";
+}
+
+<div class="text-center">
+    <h2>Ingrese su sobrenombre.</h2>
+    <p>Un guerrero del vacío no debe tener nombre que lo ate al mundo.</p>
+
+    <form action='@Url.Action("iniciarPartida", "Home")' method="POST" enctype="multipart/form-data" class="mb-3">
+        <input type="text" id="username" name="username" class="form-control mb-3" placeholder="Tu nombre" />
+        <input type="submit" value="Comenzar" />
+    </form>
+
+    <button type="button" id="abrir-dialogo">Abrir diálogo</button>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const boton = document.getElementById('abrir-dialogo');
+            const estadoJuego = {
+                salaActual: 1,
+                vidas: 3,
+                totalSalas: 4
+            };
+
+            const mostrarDialogoSala = () => {
+                HollowDialog.open({
+                    speaker: 'Soñador',
+                    avatar: 'S',
+                    message: `Sala ${estadoJuego.salaActual}: la niebla te observa. Tienes ${estadoJuego.vidas} vidas. ¿Qué harás?`,
+                    choices: [
+                        {
+                            label: 'Seguir',
+                            value: 'seguir',
+                            action: () => {
+                                estadoJuego.salaActual += 1;
+                                HollowDialog.show({
+                                    speaker: 'Narrador',
+                                    avatar: 'N',
+                                    message: estadoJuego.salaActual <= estadoJuego.totalSalas
+                                        ? `Avanzas hacia la Sala ${estadoJuego.salaActual}.`
+                                        : 'Has llegado al fin de la pesadilla. El reino del sueño respira.',
+                                    choices: [{ label: 'Continuar', value: 'ok', action: () => {} }]
+                                });
+                            }
+                        },
+                        {
+                            label: 'Retroceder',
+                            value: 'retroceder',
+                            action: () => {
+                                estadoJuego.vidas -= 1;
+                                HollowDialog.show({
+                                    speaker: 'Narrador',
+                                    avatar: 'N',
+                                    message: estadoJuego.vidas > 0
+                                        ? `Te equivocaste. Te quedan ${estadoJuego.vidas} vidas.`
+                                        : 'La pesadilla te consume. Has perdido todas tus vidas.',
+                                    choices: [{ label: 'Aceptar', value: 'aceptar', action: () => {} }]
+                                });
+                            }
+                        }
+                    ]
+                });
+            };
+
+            if (boton) {
+                boton.addEventListener('click', mostrarDialogoSala);
+            }
+        });
+    </script>
+}
+</body>
+</html>

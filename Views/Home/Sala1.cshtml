@@ -1,0 +1,210 @@
+@{
+    ViewData["Title"] = "Sala 1";
+    var mensaje = TempData["Sala1Mensaje"] as string;
+}
+
+<div class="text-center">
+    <h2>Sala 1: El juicio de los maestros</h2>
+
+    @if (!string.IsNullOrWhiteSpace(mensaje))
+    {
+        <div class="alert alert-info mt-3">@mensaje</div>
+    }
+
+    <p>
+        El primer portal se abre ante ti. Tres imponentes figuras te observan desde la oscuridad:<br />
+        <strong>Oro</strong>, <strong>Sheo</strong> y <strong>Mato</strong>.
+    </p>
+
+    <form method="post" action="@Url.Action("ValidarSala1", "Home")" id="quizForm" class="mx-auto" style="max-width:800px;">
+        <div id="dialogContainer" style="display:flex;gap:16px;align-items:flex-start;">
+            <div style="width:140px;">
+                <img id="charImage" src="/Images/Oro.png" alt="Personaje" style="width:100%;border-radius:8px;border:2px solid #333;" />
+                <div id="charName" style="margin-top:8px;font-weight:600;text-align:center;">Oro</div>
+            </div>
+
+            <div style="flex:1;text-align:left;">
+                <div id="dialogBox" style="background:#fff;border:2px solid #444;padding:12px;border-radius:8px;min-height:72px;">
+                    <div id="dialogText" style="font-size:16px;color:#111;"></div>
+                </div>
+
+                <div id="optionsArea" style="margin-top:12px;display:none;"></div>
+
+                <div id="feedbackArea" style="margin-top:8px;min-height:24px;"></div>
+
+                <div style="margin-top:12px;">
+                    <button type="button" id="nextBtn" class="btn btn-primary" style="display:none;">Siguiente</button>
+                    <button type="submit" id="submitBtn" class="btn btn-success" style="display:none;">Enviar respuestas</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function(){
+        const questions = [
+            {
+                name: 'Oro',
+                img: '/Images/Oro.png',
+                text: '¿Qué movimiento artístico se caracterizó por el humanismo, la perspectiva y la búsqueda del equilibrio clásico?',
+                options: ['Renacimiento','Barroco','Romanticismo'],
+                inputName: 'q1'
+            },
+            {
+                name: 'Sheo',
+                img: '/Images/Sheo.png',
+                text: '¿Qué civilización construyó el Coliseo en Roma?',
+                options: ['Imperio Romano','Imperio Bizantino','Imperio Español'],
+                inputName: 'q2'
+            },
+            {
+                name: 'Mato',
+                img: '/Images/Mato.png',
+                text: '¿Quién pintó La Última Cena?',
+                options: ['Leonardo da Vinci','Vincent van Gogh','Pablo Picasso'],
+                inputName: 'q3'
+            }
+        ];
+
+        let idx = 0;
+        const charImage = document.getElementById('charImage');
+        const charName = document.getElementById('charName');
+        const dialogText = document.getElementById('dialogText');
+        const optionsArea = document.getElementById('optionsArea');
+        const feedbackArea = document.getElementById('feedbackArea');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('quizForm');
+
+        const correctAnswers = {
+            q1: 'Renacimiento',
+            q2: 'Imperio Romano',
+            q3: 'Leonardo da Vinci'
+        };
+
+        const answersSelected = {};
+
+        function normalize(s){
+            return (s||'').toString().trim().toLowerCase().replace(/\s+/g,' ');
+        }
+
+        function typeText(text, cb){
+            dialogText.textContent = '';
+            let i = 0;
+            const speed = 18;
+            const t = setInterval(()=>{
+                dialogText.textContent += text.charAt(i);
+                i++;
+                if(i>=text.length){
+                    clearInterval(t);
+                    cb && cb();
+                }
+            }, speed);
+        }
+
+        function renderOptions(q){
+            optionsArea.innerHTML = '';
+            q.options.forEach((opt, j)=>{
+                const id = q.inputName + '_' + j;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-check';
+                const input = document.createElement('input');
+                input.className = 'form-check-input';
+                input.type = 'radio';
+                input.name = q.inputName;
+                input.id = id;
+                input.value = opt;
+                if(j===0) input.required = true;
+                const label = document.createElement('label');
+                label.className = 'form-check-label';
+                label.htmlFor = id;
+                label.textContent = opt;
+                wrapper.appendChild(input);
+                wrapper.appendChild(label);
+                optionsArea.appendChild(wrapper);
+            });
+            optionsArea.style.display = '';
+            // clear previous feedback
+            feedbackArea.innerHTML = '';
+        }
+
+        function showQuestion(i){
+            const q = questions[i];
+            charImage.src = q.img;
+            charName.textContent = q.name;
+            optionsArea.style.display = 'none';
+            nextBtn.style.display = 'none';
+            submitBtn.style.display = 'none';
+            typeText(q.text, ()=>{
+                renderOptions(q);
+                if(i < questions.length - 1){
+                    nextBtn.style.display = '';
+                } else {
+                    submitBtn.style.display = '';
+                }
+            });
+        }
+
+        nextBtn.addEventListener('click', ()=>{
+            const q = questions[idx];
+            const selected = form.querySelector('input[name="'+q.inputName+'"]:checked');
+            if(!selected){
+                alert('Por favor selecciona una respuesta antes de continuar.');
+                return;
+            }
+            // store
+            answersSelected[q.inputName] = selected.value;
+            // persist in a hidden input so the server receives previous answers
+            let hidden = form.querySelector('input[name="'+q.inputName+'"][type="hidden"]');
+            if(!hidden){
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = q.inputName;
+                form.appendChild(hidden);
+            }
+            hidden.value = selected.value;
+            // check correctness (normalize to avoid case/spacing issues)
+            const correct = normalize(selected.value) === normalize(correctAnswers[q.inputName]);
+            feedbackArea.innerHTML = correct ? '<div style="color:green;font-weight:600;">Correcto ✅</div>' : '<div style="color:#b00;font-weight:600;">Incorrecto ✗ — La respuesta correcta es: '+correctAnswers[q.inputName]+'</div>';
+            // advance after short delay so user sees feedback
+            setTimeout(()=>{
+                idx++;
+                showQuestion(idx);
+            }, 1100);
+        });
+
+        // intercept submit to give final feedback then submit
+        form.addEventListener('submit', (e)=>{
+            e.preventDefault();
+            const q = questions[idx];
+            const selected = form.querySelector('input[name="'+q.inputName+'"]:checked');
+            if(!selected){
+                alert('Por favor selecciona una respuesta antes de continuar.');
+                return;
+            }
+            answersSelected[q.inputName] = selected.value;
+            // persist last answer as hidden so server gets it
+            let hiddenLast = form.querySelector('input[name="'+q.inputName+'"][type="hidden"]');
+            if(!hiddenLast){
+                hiddenLast = document.createElement('input');
+                hiddenLast.type = 'hidden';
+                hiddenLast.name = q.inputName;
+                form.appendChild(hiddenLast);
+            }
+            hiddenLast.value = selected.value;
+            // compute total correct
+            let total = 0;
+            for(const qq of questions){
+                const sel = answersSelected[qq.inputName] || '';
+                if(normalize(sel) === normalize(correctAnswers[qq.inputName])) total++;
+            }
+            feedbackArea.innerHTML = '<div style="font-weight:700;">Has acertado '+total+' de '+questions.length+' preguntas.</div>';
+            // submit after short delay so user sees result
+            setTimeout(()=> form.submit(), 1200);
+        });
+
+        // Initialize
+        showQuestion(0);
+    })();
+</script>
