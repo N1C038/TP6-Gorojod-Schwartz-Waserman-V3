@@ -43,6 +43,17 @@
                 </div>
             </div>
 
+            <!-- Defeat overlay -->
+            <div id="defeatOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:10000;">
+                <div style="background:#111;color:#fff;padding:18px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;max-width:500px;width:90%;">
+                    <h3 style="margin:0 0 12px 0;color:#ff4444;">¡DERROTA!</h3>
+                    <p style="margin:0 0 16px 0;text-align:center;">La bestia te ha derribado. La caza termina contigo...</p>
+                    <div style="margin-top:12px;">
+                        <button id="retryBtn" class="btn btn-danger">Reintentar Sala</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Zote overlay shown on victory -->
             <div id="zoteOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:10000;">
                 <div style="background:#111;color:#fff;padding:18px;border-radius:10px;display:flex;gap:16px;align-items:center;max-width:900px;width:90%;">
@@ -90,8 +101,6 @@
                     Las extremidades de Nosk se tornan rojas. ¡Debes pulsar rápido para hacerle daño!
                 </div>
 
-                <button id="quickAttack" type="button" class="sala2-button">Rápido</button>
-
                 <div id="nextRoomForm" class="sala2-next-room" style="display: none;">
                     <p>¡Nosk cae! Del humo surge el verdadero Zote, quien te entrega el poder de moverte con más rapidez y fuerza.</p>
                     <form action='@Url.Action("pasarSala", "Home", new { IdSala = 2 })' method="POST">
@@ -104,11 +113,12 @@
 
     <script>
         const parts = document.querySelectorAll('.sala2-part');
-        const quickAttackBtn = document.getElementById('quickAttack');
         const enemyHpBar = document.getElementById('enemyHpBar');
         const playerHpBar = document.getElementById('playerHpBar');
         const combatStatus = document.getElementById('combatStatus');
         const nextRoomForm = document.getElementById('nextRoomForm');
+        const defeatOverlay = document.getElementById('defeatOverlay');
+        const retryBtn = document.getElementById('retryBtn');
 
         let enemyHp = 100;
         let playerHp = 100;
@@ -150,6 +160,7 @@
                         parts.forEach(part => {
                         part.style.pointerEvents = 'none';
                         });
+                        setTimeout(() => defeatOverlay.style.display = 'flex', 1800);
                     }
                 }
             }, 650);
@@ -180,9 +191,9 @@
                             if (zoteOverlay) zoteOverlay.style.display = 'none';
                             nextRoomForm.style.display = 'block';
                         });
-                    } else {
-                        setTimeout(()=> nextRoomForm.style.display = 'block', 1200);
                     }
+                } else {
+                    setTimeout(()=> triggerEnemyAttack(), 800);
                 }
             } else {
                 playerHp = Math.max(0, playerHp - 10);
@@ -192,13 +203,12 @@
                 if (playerHp <= 0) {
                     combatStatus.textContent = 'La caza termina contigo. Inténtalo de nuevo.';
                     parts.forEach(part => part.style.pointerEvents = 'none');
-                    setTimeout(() => location.reload(), 1800);
+                    setTimeout(() => defeatOverlay.style.display = 'flex', 1800);
                 }
             }
         }
 
         // Disable controls until pre-battle intro finishes
-        quickAttackBtn.disabled = true;
         enemyHpBar.style.width = enemyHp + '%';
         playerHpBar.style.width = playerHp + '%';
 
@@ -280,18 +290,34 @@
         // Start combat when user clicks the start button in the overlay
         const prebattle = document.getElementById('prebattleOverlay');
         const startBtn = document.getElementById('startCombatBtn');
+        
+        console.log('prebattle:', prebattle);
+        console.log('startBtn:', startBtn);
+        
         if(startBtn){
-            startBtn.addEventListener('click', ()=>{
-                if (prebattle) prebattle.style.display = 'none';
+            startBtn.addEventListener('click', function(e){
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Botón clickeado');
+                if (prebattle) {
+                    prebattle.style.display = 'none';
+                }
                 startCombat();
+                console.log('Combat started');
             });
         } else {
+            console.log('startBtn no encontrado, iniciando fallback');
             // fallback: start automatically after 3.5s if button not present
             setTimeout(() => {
                 if (prebattle) prebattle.style.display = 'none';
                 startCombat();
             }, 3500);
         }
-    </script>
-</body>
+
+        // Retry button event
+        if(retryBtn){
+            retryBtn.addEventListener('click', () => location.reload());
+        }
+        </script>
+    </body>
 </html>

@@ -179,8 +179,8 @@
 			h: 56,
 			vx: 0,
 			vy: 0,
-			speed: 5.2,
-			jump: -12.5,
+			speed: 7.6,
+			jump: -16,
 			onGround: true,
 			hp: 100,
 			iFrames: 0
@@ -192,12 +192,12 @@
 			r: 70
 		};
 
-		const gravity = 0.62;
+		const gravity = 0.62;			
 		const attacks = [
 			{ key: 'vertical', label: 'Ataque 1/4 · Espadas verticales', duration: 12000 },
 			{ key: 'horizontal', label: 'Ataque 2/4 · Espadas horizontales', duration: 12000 },
 			{ key: 'laser', label: 'Ataque 3/4 · Lasers circulares', duration: 12000 },
-			{ key: 'curved', label: 'Ataque 4/4 · Espadas curvas', duration: 12000 }
+			{ key: 'chase', label: 'Ataque 4/4 · Bolitas perseguidoras', duration: 12000 }
 		];
 
 		let currentAttackIndex = 0;
@@ -215,20 +215,28 @@
 			vertical: [],
 			horizontal: [],
 			lasers: [],
-			curved: []
+			chase: []
 		};
 
 		const cooldown = {
 			vertical: 0,
 			horizontal: 0,
 			laser: 0,
-			curved: 0
+			chase: 0
 		};
 
 		const bgImg = new Image();
 		bgImg.src = '/Images/radianceBack.jfif';
 		const bossImg = new Image();
 		bossImg.src = '/Images/THERADIANCE.webp';
+		const verticalSwordImg = new Image();
+		verticalSwordImg.src = '/Images/rEspVertical.png';
+		const horizontalRightImg = new Image();
+		horizontalRightImg.src = '/Images/rEspHorDer.png';
+		const horizontalLeftImg = new Image();
+		horizontalLeftImg.src = '/Images/rEspHorIzq.png';
+		const chaseBallImg = new Image();
+		chaseBallImg.src = '/Images/bolita.png';
 
 		function clamp(value, min, max) {
 			return Math.max(min, Math.min(max, value));
@@ -248,11 +256,11 @@
 			hazards.vertical = [];
 			hazards.horizontal = [];
 			hazards.lasers = [];
-			hazards.curved = [];
+			hazards.chase = [];
 			cooldown.vertical = 0;
 			cooldown.horizontal = 0;
 			cooldown.laser = 0;
-			cooldown.curved = 0;
+			cooldown.chase = 0;
 			updateHud();
 			statusEl.textContent = attacks[0].label;
 		}
@@ -295,17 +303,17 @@
 		}
 
 		function spawnVerticalWave() {
-			const laneWidth = 80;
+			const laneWidth = 110;
 			const lanes = Math.floor(arena.width / laneWidth);
-			const gapStart = Math.floor(Math.random() * Math.max(1, lanes - 2));
+			const gapStart = Math.floor(Math.random() * Math.max(1, lanes - 1));
 			for (let i = 0; i < lanes; i++) {
-				if (i === gapStart || i === gapStart + 1) continue;
+				if (i === gapStart) continue;
 				hazards.vertical.push({
 					x: i * laneWidth + laneWidth * 0.1,
 					y: -50,
 					w: laneWidth * 0.8,
 					h: 50,
-					vy: 6.2
+					vy: 4.8
 				});
 			}
 		}
@@ -314,7 +322,7 @@
 			cooldown.vertical -= dt;
 			if (cooldown.vertical <= 0) {
 				spawnVerticalWave();
-				cooldown.vertical = 950;
+				cooldown.vertical = 1400;
 			}
 
 			const p = playerRect();
@@ -322,7 +330,7 @@
 				const sword = hazards.vertical[i];
 				sword.y += sword.vy;
 				if (rectIntersects(p, sword)) {
-					hitPlayer(10, 'Las espadas del cielo te alcanzan.');
+					hitPlayer(7, 'Las espadas del cielo te alcanzan.');
 				}
 				if (sword.y > arena.height + 60) {
 					hazards.vertical.splice(i, 1);
@@ -332,45 +340,36 @@
 
 		function spawnHorizontalWave() {
 			const centerY = 220 + Math.random() * 90;
-			const gap = 90;
-			const thickness = 24;
+			const gap = 220;
+			const thickness = 16;
 			hazards.horizontal.push({
-				x: -360,
+				x: -200,
 				y: 0,
-				w: 360,
-				h: Math.max(0, centerY - gap / 2),
-				vx: 5.2
+				w: 200,
+				h: Math.max(0, centerY - gap / 2),	
+				vx: 4.4
 			});
 			hazards.horizontal.push({
-				x: -360,
+				x: -200,
 				y: centerY + gap / 2,
-				w: 360,
+				w: 200,
 				h: arena.floor - (centerY + gap / 2),
-				vx: 5.2
+				vx: 4.4
 			});
 
 			hazards.horizontal.push({
 				x: arena.width,
 				y: 0,
-				w: 360,
+				w: 200,
 				h: Math.max(0, centerY - gap / 2),
-				vx: -5.2
+				vx: -4.4
 			});
 			hazards.horizontal.push({
 				x: arena.width,
 				y: centerY + gap / 2,
-				w: 360,
+				w: 200,
 				h: arena.floor - (centerY + gap / 2),
-				vx: -5.2
-			});
-
-			hazards.horizontal.push({
-				x: 0,
-				y: centerY - thickness / 2,
-				w: arena.width,
-				h: thickness,
-				vx: 0,
-				ttl: 430
+				vx: -4.4
 			});
 		}
 
@@ -378,7 +377,7 @@
 			cooldown.horizontal -= dt;
 			if (cooldown.horizontal <= 0) {
 				spawnHorizontalWave();
-				cooldown.horizontal = 1450;
+				cooldown.horizontal = 1800;
 			}
 
 			const p = playerRect();
@@ -456,43 +455,81 @@
 			}
 		}
 
-		function spawnCurvedSwords() {
-			const base = Math.random() * Math.PI * 2;
-			const turn = Math.random() > 0.5 ? 1 : -1;
-			for (let i = 0; i < 7; i++) {
-				hazards.curved.push({
-					a: base + i * 0.22,
-					r: 76,
-					vr: 3.2 + i * 0.22,
-					va: 0.03 * turn,
-					ttl: 2100,
-					size: 10
+		function spawnChasingBalls() {
+			const count = 2;
+			for (let i = 0; i < count; i++) {
+				const angle = (Math.PI * 2 * i) / count;
+				hazards.chase.push({
+					x: radiance.x + Math.cos(angle) * 120,
+					y: radiance.y + Math.sin(angle) * 120,
+					vx: 0,
+					vy: 0,
+					r: 20,
+					speed: 3.8,
+					ttl: 6000
 				});
 			}
 		}
 
-		function updateCurved(dt) {
-			cooldown.curved -= dt;
-			if (cooldown.curved <= 0) {
-				spawnCurvedSwords();
-				cooldown.curved = 980;
+		function updateChase(dt) {
+			cooldown.chase -= dt;
+			if (cooldown.chase <= 0) {
+				spawnChasingBalls();
+				cooldown.chase = 2000;
 			}
 
-			for (let i = hazards.curved.length - 1; i >= 0; i--) {
-				const sword = hazards.curved[i];
-				sword.r += sword.vr;
-				sword.a += sword.va;
-				sword.ttl -= dt;
+			const p = playerRect();
+			for (let i = hazards.chase.length - 1; i >= 0; i--) {
+				const ball = hazards.chase[i];
+				
+				ball.ttl -= dt;
 
-				const x = radiance.x + Math.cos(sword.a) * sword.r;
-				const y = radiance.y + Math.sin(sword.a) * sword.r;
-				const d = Math.hypot(player.x - x, (player.y - player.h * 0.55) - y);
-				if (d < sword.size + 13) {
-					hitPlayer(10, 'Las espadas curvas giran y te cortan.');
+				// Seguimiento errático hacia el jugador con bastante aleatoriedad
+				const dx = player.x - ball.x;
+				const dy = (player.y - player.h * 0.5) - ball.y;
+				const dist = Math.hypot(dx, dy);
+				
+				if (dist > 0.1) {
+					// Agregar aleatoriedad significativa al ángulo de ataque
+					const angle = Math.atan2(dy, dx);
+					const randomAngle = angle + (Math.random() - 0.5) * 0.45;
+					
+					// Velocidad consistente hacia el objetivo con aleatoriedad
+					const targetVx = Math.cos(randomAngle) * ball.speed;
+					const targetVy = Math.sin(randomAngle) * ball.speed;
+					
+					// Aceleración media para mantener seguimiento consistente con inercia
+					ball.vx += (targetVx - ball.vx) * 0.14;
+					ball.vy += (targetVy - ball.vy) * 0.14;
+				}
+				
+				// Limitar velocidades
+				ball.vx = Math.max(-5.5, Math.min(5.5, ball.vx));
+				ball.vy = Math.max(-5.5, Math.min(6.5, ball.vy));
+				
+				// Aplicar gravedad leve para ayudar a caer al piso
+				ball.vy += gravity * 0.4;
+				
+				ball.x += ball.vx;
+				ball.y += ball.vy;
+
+				// Colisión con el jugador
+				if (rectIntersects(p, { x: ball.x - ball.r, y: ball.y - ball.r, w: ball.r * 2, h: ball.r * 2 })) {
+					hitPlayer(7, 'Una bolita ardiente te golpea.');
+					hazards.chase.splice(i, 1);
+					continue;
 				}
 
-				if (sword.ttl <= 0 || sword.r > 860) {
-					hazards.curved.splice(i, 1);
+				// Choque con límites de la sala
+				if (ball.x - ball.r < 0 || ball.x + ball.r > arena.width || 
+				    ball.y - ball.r < 0 || ball.y + ball.r > arena.floor) {
+					hazards.chase.splice(i, 1);
+					continue;
+				}
+
+				// Desaparición por tiempo
+				if (ball.ttl <= 0) {
+					hazards.chase.splice(i, 1);
 				}
 			}
 		}
@@ -581,12 +618,21 @@
 		function drawHazards() {
 			ctx.fillStyle = 'rgba(235, 235, 255, 0.95)';
 			hazards.vertical.forEach((s) => {
-				ctx.fillRect(s.x, s.y, s.w, s.h);
+				if (verticalSwordImg.complete && verticalSwordImg.naturalWidth > 0) {
+					ctx.drawImage(verticalSwordImg, s.x, s.y, s.w, s.h);
+				} else {
+					ctx.fillRect(s.x, s.y, s.w, s.h);
+				}
 			});
 
 			ctx.fillStyle = 'rgba(250, 250, 255, 0.9)';
 			hazards.horizontal.forEach((s) => {
-				ctx.fillRect(s.x, s.y, s.w, s.h);
+				const sprite = s.vx >= 0 ? horizontalRightImg : horizontalLeftImg;
+				if (sprite.complete && sprite.naturalWidth > 0) {
+					ctx.drawImage(sprite, s.x, s.y, s.w, s.h);
+				} else {
+					ctx.fillRect(s.x, s.y, s.w, s.h);
+				}
 			});
 
 			hazards.lasers.forEach((l) => {
@@ -600,13 +646,15 @@
 				ctx.stroke();
 			});
 
-			ctx.fillStyle = 'rgba(255, 246, 210, 0.95)';
-			hazards.curved.forEach((s) => {
-				const x = radiance.x + Math.cos(s.a) * s.r;
-				const y = radiance.y + Math.sin(s.a) * s.r;
-				ctx.beginPath();
-				ctx.arc(x, y, s.size, 0, Math.PI * 2);
-				ctx.fill();
+			ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
+			hazards.chase.forEach((ball) => {
+				if (chaseBallImg.complete && chaseBallImg.naturalWidth > 0) {
+					ctx.drawImage(chaseBallImg, ball.x - ball.r, ball.y - ball.r, ball.r * 2, ball.r * 2);
+				} else {
+					ctx.beginPath();
+					ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+					ctx.fill();
+				}
 			});
 		}
 
@@ -627,7 +675,7 @@
 			if (attack.key === 'vertical') updateVertical(dt);
 			if (attack.key === 'horizontal') updateHorizontal(dt);
 			if (attack.key === 'laser') updateLaser(dt);
-			if (attack.key === 'curved') updateCurved(dt);
+			if (attack.key === 'chase') updateChase(dt);
 		}
 
 		function frame(timestamp) {
