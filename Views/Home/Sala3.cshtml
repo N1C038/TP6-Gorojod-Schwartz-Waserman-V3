@@ -36,7 +36,7 @@
                 <div class="forge-progress-bar">
                     <div id="forgeProgressFill" class="forge-progress-fill"></div>
                 </div>
-                <span id="forgeProgressText">0/3 golpes</span>
+                <span id="forgeProgressText">0/5 golpes</span>
             </div>
 
             <div class="timing-bar-container">
@@ -48,19 +48,19 @@
                 <p id="timingMessage" class="timing-message">Prepárate...comenzará en breve</p>
             </div>
 
-            <button id="strikeButton" class="strike-button" disabled>
-                <span class="button-text">Preparado</span>
+            <button id="strikeButton" class="strike-button">
+                <span class="button-text">Empezar a Forjar (Click o Espacio)</span>
             </button>
 
             <div id="forgeStatus" class="forge-status-text">
-                Observa la barra de energía...
+                Observa la barra de energía... Cuando estés listo, ¡haz click para empezar! Luego, golpea cuando la barra entre en la zona verde.
             </div>
 
             <div id="forgeCompleteForm" class="forge-complete" style="display: none;">
                 <p>¡Tu aguijón ha sido forjado a la perfección!</p>
                 <p>El herrero asiente con satisfacción: <strong>"Tu arma está lista. Ahora eres lo suficientemente fuerte para enfrentar lo que viene."</strong></p>
-                <form action='@Url.Action("pasarSala", "Home", new { IdSala = 2 })' method="GET">
-                    <input type="submit" value="Entrar a la Sala 3" />
+                <form action='@Url.Action("pasarSala", "Home", new { IdSala = 3 })' method="POST">
+                    <input type="submit" value="Entrar a la Sala 4" />
                 </form>
             </div>
         </div>
@@ -79,32 +79,50 @@
     const forgeCompleteForm = document.getElementById('forgeCompleteForm');
 
     let successfulStrikes = 0;
-    const requiredStrikes = 3;
+    const requiredStrikes = 5;
     let isForging = false;
     let indicatorMoving = false;
     let animationFrameId = null;
+    let gameStarted = false;
+    let currentDuration = 2500; // Duración que aumenta con cada golpe exitoso
+    const initialDuration = 2500; // Duración inicial
+    // Hit zone variables (porcentaje del ancho de la barra)
+    let hitZoneWidth = 30; // porcentaje (inicial 30%: 35%..65%)
+    const minHitZoneWidth = 8; // ancho mínimo para seguir siendo jugable
+    const hitZoneShrinkPerSuccess = 4; // cuanto se reduce en % por acierto
 
     // Iniciar el mini-juego
-    function startForging() {
+    function startForging(duration = currentDuration) {
         if (isForging || successfulStrikes >= requiredStrikes) return;
-        
+
         isForging = true;
-        strikeButton.disabled = true;
-        strikeButton.classList.add('disabled');
         timingMessage.textContent = '¡Golpea cuando llegues a la zona verde!';
         forgeStatus.textContent = 'Forjando...';
-        
-        // Mostrar la barra en movimiento
-        moveTimingIndicator();
+
+        // Mostrar la barra en movimiento con la duración dada
+        moveTimingIndicator(duration);
     }
 
-    function moveTimingIndicator() {
+    // Iniciar el primer juego cuando el usuario hace click
+    function initializeGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+        strikeButton.innerHTML = '<span class="button-text">¡Golpear!</span>';
+        forgeStatus.textContent = '¡Listo! Haz click para golpear cuando la barra entre en la zona verde.';
+        timingMessage.textContent = 'Observa la barra...';
+        updateHitZone();
+    }
+
+    function updateHitZone() {
+        // Centrar la zona de golpe en la barra
+        const start = (100 - hitZoneWidth) / 2; // ej. (100-30)/2 = 35
+        hitZone.style.left = start + '%';
+        hitZone.style.width = hitZoneWidth + '%';
+    }
+
+    function moveTimingIndicator(duration) {
         let position = 0;
-        const speed = 2;
-        const duration = 2500; // 2.5 segundos para recorrer
         const startTime = Date.now();
-        const hitZoneStart = 35; // Zona de golpe comienza al 35%
-        const hitZoneEnd = 65; // Zona de golpe termina al 65%
 
         const animate = () => {
             const elapsed = Date.now() - startTime;
@@ -125,8 +143,8 @@
         if (!isForging) return;
 
         const indicatorPos = parseFloat(timingIndicator.style.left) || 0;
-        const hitZoneStart = 35;
-        const hitZoneEnd = 65;
+        const hitZoneStart = (100 - hitZoneWidth) / 2;
+        const hitZoneEnd = hitZoneStart + hitZoneWidth;
 
         if (indicatorPos >= hitZoneStart && indicatorPos <= hitZoneEnd) {
             endForgeAttempt(true);
@@ -138,11 +156,14 @@
     function endForgeAttempt(success) {
         isForging = false;
         cancelAnimationFrame(animationFrameId);
-        strikeButton.disabled = false;
-        strikeButton.classList.remove('disabled');
 
         if (success) {
             successfulStrikes++;
+            // Aumentar la velocidad: reducir la duración en 300ms con cada golpe exitoso
+            currentDuration = Math.max(800, currentDuration - 300);
+            // Reducir el tamaño de la zona verde con cada acierto
+            hitZoneWidth = Math.max(minHitZoneWidth, hitZoneWidth - hitZoneShrinkPerSuccess);
+            updateHitZone();
             forgeProgressFill.style.width = (successfulStrikes / requiredStrikes) * 100 + '%';
             forgeProgressText.textContent = `${successfulStrikes}/${requiredStrikes} golpes`;
             
@@ -162,9 +183,17 @@
                 setTimeout(() => {
                     timingMessage.textContent = 'Prepárate para el siguiente golpe...';
                     timingIndicator.style.left = '0%';
+                    // Reiniciar automáticamente después de 1.5 segundos
+                    setTimeout(() => {
+                        if (successfulStrikes < requiredStrikes) {
+                            startForging(currentDuration);
+                        }
+                    }, 1500);
                 }, 1500);
             }
         } else {
+            // En caso de fallo, resetear la velocidad pero mantener los golpes
+            currentDuration = initialDuration;
             forgeStatus.textContent = '¡Fallaste! El golpe no fue lo suficientemente fuerte.';
             timingMessage.textContent = '✗ Timing incorrecto - Intenta de nuevo';
             timingMessage.classList.add('error');
@@ -177,13 +206,17 @@
             setTimeout(() => {
                 timingMessage.textContent = 'Prepárate para intentar de nuevo...';
                 timingIndicator.style.left = '0%';
+                // Reiniciar automáticamente después de 1.5 segundos
+                setTimeout(() => {
+                    if (successfulStrikes < requiredStrikes) {
+                        startForging(currentDuration);
+                    }
+                }, 1500);
             }, 1500);
         }
     }
 
     function forgeCompleted() {
-        strikeButton.disabled = true;
-        strikeButton.classList.add('disabled');
         forgeStatus.textContent = '¡Tu aguijón ha sido perfectamente forjado!';
         timingMessage.textContent = '🔥 ¡FORJA COMPLETADA!';
         timingMessage.classList.add('success');
@@ -194,9 +227,14 @@
     }
 
     strikeButton.addEventListener('click', () => {
-        if (!isForging && successfulStrikes < requiredStrikes) {
+        if (!gameStarted) {
+            // Primera vez: inicializar el juego
+            initializeGame();
+        } else if (!isForging && successfulStrikes < requiredStrikes) {
+            // Iniciar un nuevo intento
             startForging();
         } else if (isForging) {
+            // Golpear durante el intento
             checkHit();
         }
     });
@@ -205,7 +243,9 @@
     document.addEventListener('keydown', (e) => {
         if (e.code === 'Space') {
             e.preventDefault();
-            if (!isForging && successfulStrikes < requiredStrikes) {
+            if (!gameStarted) {
+                initializeGame();
+            } else if (!isForging && successfulStrikes < requiredStrikes) {
                 startForging();
             } else if (isForging) {
                 checkHit();
@@ -216,4 +256,6 @@
     // Inicializar UI
     forgeProgressFill.style.width = '0%';
     timingIndicator.style.left = '0%';
+    strikeButton.disabled = false;
+    strikeButton.classList.remove('disabled');
 </script>

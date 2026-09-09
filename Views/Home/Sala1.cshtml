@@ -41,6 +41,29 @@
     </form>
 </div>
 
+<!-- Overlay del Aguijón Roto (insertar antes de </body>) -->
+<div id="nailOverlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:10000;">
+  <div style="background:#111;color:#fff;padding:18px;border-radius:10px;display:flex;gap:16px;align-items:center;max-width:900px;width:90%;">
+    <div style="width:200px;flex:0 0 200px;">
+      <img src="/Images/Aguijon-Roto.png" alt="Aguijón Roto" style="width:100%;border-radius:8px;border:2px solid #333;" />
+    </div>
+    <div style="flex:1;">
+      <h3 style="margin:0 0 6px 0;">Has obtenido el Aguijón Roto</h3>
+      <p id="nailDialogText" style="margin:0 0 6px 0;">Te han entregado el aguijón roto. Te ayudará en lo que viene.</p>
+      <div style="margin-top:12px;">
+        <button id="nailContinueBtn" class="btn btn-primary">Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form para avanzar (oculto hasta continuar) -->
+<div id="nailNextRoom" style="display:none;">
+  <form action='@Url.Action("pasarSala", "Home", new { IdSala = 1 })' method="GET">
+    <input type="submit" value="Entrar a la Sala 2" />
+  </form>
+</div>
+
 <script>
     (function(){
         const questions = [
@@ -65,6 +88,7 @@
                 options: ['Leonardo da Vinci','Vincent van Gogh','Pablo Picasso'],
                 inputName: 'q3'
             }
+            
         ];
 
         let idx = 0;
@@ -201,10 +225,44 @@
             }
             feedbackArea.innerHTML = '<div style="font-weight:700;">Has acertado '+total+' de '+questions.length+' preguntas.</div>';
             // submit after short delay so user sees result
-            setTimeout(()=> form.submit(), 1200);
+            if(total === questions.length){
+                // show overlay to inform player about the broken nail and let them continue
+            showNailOverlay();
+            } else {
+                setTimeout(()=> form.submit(), 1200);
+            }
         });
 
         // Initialize
         showQuestion(0);
     })();
+
+    // Muestra el overlay del aguijón roto y, al continuar, envía el formulario para validar/avanzar
+function showNailOverlay() {
+  const overlay = document.getElementById('nailOverlay');
+  const continueBtn = document.getElementById('nailContinueBtn');
+  if (overlay) overlay.style.display = 'flex';
+  if (continueBtn) {
+    continueBtn.addEventListener('click', function() {
+      // bloquear el botón para evitar dobles envíos y dar feedback
+      continueBtn.disabled = true;
+      continueBtn.textContent = 'Entrando a la Sala 2...';
+      // NO ocultar el overlay: esperamos a que la navegación ocurra
+      const form = document.getElementById('quizForm');
+      if (form) {
+        form.submit();
+      } else {
+        // fallback: navegar manualmente (usa la ruta del servidor)
+        window.location.href = '@Url.Action("pasarSala", "Home", new { IdSala = 1 })';
+      }
+    }, { once: true });
+  } else {
+    // fallback: submit form after short delay (overlay stays visible if present)
+    setTimeout(() => {
+      const form = document.getElementById('quizForm');
+      if (form) { form.submit(); } else { window.location.href = '@Url.Action("pasarSala", "Home", new { IdSala = 1 })'; }
+    }, 1200);
+  }
+}
+  
 </script>

@@ -325,77 +325,71 @@ textarea:focus {
 
 .sala2-part {
   position: absolute;
-  background: transparent; /* no solid overlay so the image remains visible */
-  border: 2px solid rgba(0,0,0,0); /* keep clickable area but invisible border by default */
-  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+  background: transparent;
+  border: none;
+  transition: opacity 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
   cursor: pointer;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden;
 }
 
 .sala2-part.active {
   /* semi-transparent red overlay that blends with the image underneath */
-  background: rgba(255, 60, 60, 0.36);
+  background: rgba(255, 60, 60, 0.36) !important;
   mix-blend-mode: multiply;
-  border-color: rgba(255, 120, 120, 0.45);
-  box-shadow: 0 0 18px rgba(255, 80, 80, 0.45);
+  box-shadow: 0 0 18px rgba(255, 80, 80, 0.45) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
 }
 
 .sala2-part.hit {
   transform: scale(1.08);
-  box-shadow: 0 0 28px rgba(255, 70, 70, 0.55);
+  box-shadow: 0 0 28px rgba(255, 70, 70, 0.55) !important;
 }
 
-.part-head {
-  width: 120px;
-  height: 110px;
+/* Wings - upper sides */
+.part-left-wing,
+.part-right-wing {
   border-radius: 50%;
-  top: 40px;
-  left: 50%;
-  transform: translateX(-50%);
+  clip-path: circle(50%);
 }
 
+/* Head - top center */
+.part-head {
+  border-radius: 50%;
+  clip-path: circle(50%);
+}
+
+/* Body - main torso */
 .part-body {
-  width: 180px;
-  height: 150px;
-  border-radius: 40% 40% 55% 55%;
-  top: 132px;
-  left: 50%;
-  transform: translateX(-50%);
+  border-radius: 40%;
+  clip-path: ellipse(50% 60%);
 }
 
-.part-left-arm,
-.part-right-arm {
-  width: 80px;
-  height: 185px;
-  border-radius: 45px;
-  top: 150px;
-}
-
+/* Left Arm - left side */
 .part-left-arm {
-  left: 135px;
-  transform: rotate(28deg);
+  border-radius: 40%;
+  clip-path: polygon(20% 10%, 80% 15%, 90% 40%, 85% 70%, 70% 90%, 40% 95%, 15% 85%, 10% 50%);
 }
 
+/* Right Arm - right side */
 .part-right-arm {
-  right: 135px;
-  transform: rotate(-28deg);
+  border-radius: 40%;
+  clip-path: polygon(10% 15%, 80% 10%, 90% 50%, 85% 85%, 60% 95%, 30% 90%, 15% 70%, 20% 40%);
 }
 
-.part-left-leg,
-.part-right-leg {
-  width: 90px;
-  height: 160px;
-  border-radius: 40px;
-  top: 265px;
-}
-
+/* Left Leg - bottom left */
 .part-left-leg {
-  left: 200px;
-  transform: rotate(12deg);
+  border-radius: 35%;
+  clip-path: polygon(15% 5%, 85% 8%, 90% 35%, 92% 65%, 85% 90%, 65% 98%, 30% 95%, 12% 70%);
 }
 
+/* Right Leg - bottom right */
 .part-right-leg {
-  right: 200px;
-  transform: rotate(-12deg);
+  border-radius: 35%;
+  clip-path: polygon(10% 8%, 85% 5%, 88% 70%, 85% 95%, 65% 98%, 35% 95%, 15% 65%, 10% 35%);
 }
 
 .sala2-panel {

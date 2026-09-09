@@ -24,6 +24,8 @@ public class HomeController : Controller
             if (existing != null)
             {
                 HttpContext.Session.SetString("PartidaId", existing.Id.ToString());
+                // Clear any leftover TempData messages when resuming a partida
+                TempData.Remove("Sala1Mensaje");
                 // resume at the saved room
                 return RedirectToAction("Sala", new { IdSala = existing.IdSala });
             }
@@ -34,6 +36,8 @@ public class HomeController : Controller
         { fechaInicio = DateTime.Today, horaInicio = DateTime.Now, IdSala = 1, estadoActual = "curso", nombreJugador = username };
         partida.Id = bd.crearPartida(partida);
         HttpContext.Session.SetString("PartidaId", partida.Id.ToString());
+        // Clear any leftover TempData messages when starting a new partida
+        TempData.Remove("Sala1Mensaje");
         return RedirectToAction("Sala", new { IdSala = 1 });
     }
 
@@ -65,6 +69,11 @@ public class HomeController : Controller
         if (string.IsNullOrEmpty(partidaIdSession))
             return RedirectToAction("Historia");
 
+        int partidaId = int.Parse(partidaIdSession);
+        BD bd = new BD();
+        // Actualizar la partida a Sala 3
+        bd.pasarSala(partidaId, 3);
+        
         HttpContext.Session.SetString("EnForja", "true");
         return RedirectToAction("Sala", new { IdSala = 3 });
     }
@@ -82,14 +91,13 @@ public class HomeController : Controller
         string? enForja = HttpContext.Session.GetString("EnForja");
         string viewName;
         
-        if (IdSala == 2 && enForja == "true")
+        if (IdSala == 3)
         {
-            viewName = "Sala2Forge";
-            HttpContext.Session.Remove("EnForja");
+            viewName = "Sala3";
         }
         else
         {
-            viewName = IdSala == 2 ? "Sala2Combat" : "Sala" + IdSala;
+            viewName = IdSala == 2 ? "Sala2" : "Sala" + IdSala;
         }
         
         return View(viewName);
@@ -137,7 +145,7 @@ public class HomeController : Controller
                 new BD().pasarSala(partidaId, 2);
             }
 
-            TempData["Sala1Mensaje"] = "Has ganado la confianza de Oro, Sheo y Mato. El Aguijón Puro te ha sido entregado.";
+            TempData["Sala1Mensaje"] = "Has ganado la confianza de Oro, Sheo y Mato. El Aguijón roto te ha sido entregado.";
             return RedirectToAction("Sala", new { IdSala = 2 });
         }
 

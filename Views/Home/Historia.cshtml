@@ -15,7 +15,7 @@
     <p>Un guerrero del vacío no debe tener nombre que lo ate al mundo.</p>
 
     <form action='@Url.Action("iniciarPartida", "Home")' method="POST" enctype="multipart/form-data" class="mb-3">
-        <input type="text" id="username" name="username" class="form-control mb-3" placeholder="Tu nombre" />
+        <input type="text" id="username" name="username" class="form-control mb-3" placeholder="Tu nombre" required/>
         <input type="submit" value="Comenzar" />
     </form>
 
