@@ -179,7 +179,7 @@
 			h: 56,
 			vx: 0,
 			vy: 0,
-			speed: 7.6,
+			speed: 9.5,
 			jump: -16,
 			onGround: true,
 			hp: 100,
@@ -188,7 +188,7 @@
 
 		const radiance = {
 			x: arena.width * 0.5,
-			y: 125,
+			y: 220,
 			r: 70
 		};
 
@@ -214,7 +214,7 @@
 		const hazards = {
 			vertical: [],
 			horizontal: [],
-			lasers: [],
+			laserPatterns: [],
 			chase: []
 		};
 
@@ -231,10 +231,14 @@
 		bossImg.src = '/Images/THERADIANCE.webp';
 		const verticalSwordImg = new Image();
 		verticalSwordImg.src = '/Images/rEspVertical.png';
-		const horizontalRightImg = new Image();
-		horizontalRightImg.src = '/Images/rEspHorDer.png';
-		const horizontalLeftImg = new Image();
-		horizontalLeftImg.src = '/Images/rEspHorIzq.png';
+		const horizontalRightImg2 = new Image();
+		horizontalRightImg2.src = '/Images/rEspHorDer2.png';
+		const horizontalRightImg3 = new Image();
+		horizontalRightImg3.src = '/Images/rEspHorDer3.png';
+		const horizontalLeftImg2 = new Image();
+		horizontalLeftImg2.src = '/Images/rEspHorIzq2.png';
+		const horizontalLeftImg3 = new Image();
+		horizontalLeftImg3.src = '/Images/rEspHorIzq3.png';
 		const chaseBallImg = new Image();
 		chaseBallImg.src = '/Images/bolita.png';
 
@@ -255,7 +259,7 @@
 			ended = false;
 			hazards.vertical = [];
 			hazards.horizontal = [];
-			hazards.lasers = [];
+			hazards.laserPatterns = [];
 			hazards.chase = [];
 			cooldown.vertical = 0;
 			cooldown.horizontal = 0;
@@ -303,16 +307,16 @@
 		}
 
 		function spawnVerticalWave() {
-			const laneWidth = 110;
+			const laneWidth = 100;
 			const lanes = Math.floor(arena.width / laneWidth);
 			const gapStart = Math.floor(Math.random() * Math.max(1, lanes - 1));
 			for (let i = 0; i < lanes; i++) {
 				if (i === gapStart) continue;
 				hazards.vertical.push({
-					x: i * laneWidth + laneWidth * 0.1,
+					x: i * laneWidth + laneWidth * 0.06,
 					y: -50,
-					w: laneWidth * 0.8,
-					h: 50,
+					w: laneWidth * 0.88,
+					h: 60,
 					vy: 4.8
 				});
 			}
@@ -339,37 +343,71 @@
 		}
 
 		function spawnHorizontalWave() {
-			const centerY = 220 + Math.random() * 90;
-			const gap = 220;
+			const centerY = 200 + Math.random() * 120;
+			const gap = 70 + Math.random() * 30;
 			const thickness = 16;
+			const topHeight = Math.max(0, centerY - gap / 2);
+			const bottomHeight = arena.floor - (centerY + gap / 2);
+			const topVariant = topHeight < 180 ? 2 : 3;
+			const bottomVariant = bottomHeight < 180 ? 2 : 3;
+			const topHitboxH = Math.min(32, Math.max(20, topHeight * 0.28));
+			const bottomHitboxH = Math.min(32, Math.max(20, bottomHeight * 0.28));
 			hazards.horizontal.push({
 				x: -200,
 				y: 0,
 				w: 200,
-				h: Math.max(0, centerY - gap / 2),	
-				vx: 4.4
+				h: topHeight,
+				vx: 4.4,
+				variant: topVariant,
+				hitbox: {
+					x: -200,
+					y: Math.max(0, (topHeight - topHitboxH) / 2),
+					w: 200,
+					h: topHitboxH
+				}
 			});
 			hazards.horizontal.push({
 				x: -200,
 				y: centerY + gap / 2,
 				w: 200,
-				h: arena.floor - (centerY + gap / 2),
-				vx: 4.4
+				h: bottomHeight,
+				vx: 4.4,
+				variant: bottomVariant,
+				hitbox: {
+					x: -200,
+					y: centerY + gap / 2 + Math.max(0, (bottomHeight - bottomHitboxH) / 2),
+					w: 200,
+					h: bottomHitboxH
+				}
 			});
 
 			hazards.horizontal.push({
 				x: arena.width,
 				y: 0,
 				w: 200,
-				h: Math.max(0, centerY - gap / 2),
-				vx: -4.4
+				h: topHeight,
+				vx: -4.4,
+				variant: topVariant,
+				hitbox: {
+					x: arena.width,
+					y: Math.max(0, (topHeight - topHitboxH) / 2),
+					w: 200,
+					h: topHitboxH
+				}
 			});
 			hazards.horizontal.push({
 				x: arena.width,
 				y: centerY + gap / 2,
 				w: 200,
-				h: arena.floor - (centerY + gap / 2),
-				vx: -4.4
+				h: bottomHeight,
+				vx: -4.4,
+				variant: bottomVariant,
+				hitbox: {
+					x: arena.width,
+					y: centerY + gap / 2 + Math.max(0, (bottomHeight - bottomHitboxH) / 2),
+					w: 200,
+					h: bottomHitboxH
+				}
 			});
 		}
 
@@ -385,13 +423,14 @@
 				const segment = hazards.horizontal[i];
 				if (segment.vx !== 0) {
 					segment.x += segment.vx;
+					if (segment.hitbox) segment.hitbox.x += segment.vx;
 				}
 
 				if (segment.ttl !== undefined) {
 					segment.ttl -= dt;
 				}
 
-				if (rectIntersects(p, segment)) {
+				if (rectIntersects(p, segment.hitbox || segment)) {
 					hitPlayer(9, 'Las espadas laterales cierran el paso.');
 				}
 
@@ -407,14 +446,11 @@
 
 		function spawnLaserRing() {
 			const base = Math.random() * Math.PI;
-			for (let i = 0; i < 10; i++) {
-				hazards.lasers.push({
-					a: base + i * (Math.PI * 2 / 10),
-					len: 18,
-					speed: 8.8,
-					ttl: 1400
-				});
-			}
+			hazards.laserPatterns.push({
+				state: 'warning',
+				ttl: 680,
+				angles: Array.from({ length: 10 }, (_, i) => base + i * (Math.PI * 2 / 10))
+			});
 		}
 
 		function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
@@ -431,26 +467,47 @@
 			cooldown.laser -= dt;
 			if (cooldown.laser <= 0) {
 				spawnLaserRing();
-				cooldown.laser = 1200;
+				cooldown.laser = 1450;
 			}
 
-			for (let i = hazards.lasers.length - 1; i >= 0; i--) {
-				const laser = hazards.lasers[i];
-				laser.len += laser.speed;
-				laser.ttl -= dt;
+			for (let i = hazards.laserPatterns.length - 1; i >= 0; i--) {
+				const pattern = hazards.laserPatterns[i];
 
-				const x1 = radiance.x;
-				const y1 = radiance.y;
-				const x2 = x1 + Math.cos(laser.a) * laser.len;
-				const y2 = y1 + Math.sin(laser.a) * laser.len;
-				const dist = pointToSegmentDistance(player.x, player.y - player.h * 0.5, x1, y1, x2, y2);
-
-				if (dist < 14) {
-					hitPlayer(8, 'Un láser te quema al atravesar la arena.');
+				if (pattern.state === 'warning') {
+					pattern.ttl -= dt;
+					if (pattern.ttl <= 0) {
+						pattern.state = 'gap';
+						pattern.ttl = 110;
+					}
+					continue;
 				}
 
-				if (laser.ttl <= 0 || laser.len > 1300) {
-					hazards.lasers.splice(i, 1);
+				if (pattern.state === 'gap') {
+					pattern.ttl -= dt;
+					if (pattern.ttl <= 0) {
+						pattern.state = 'active';
+						pattern.ttl = 360;
+					}
+					continue;
+				}
+
+				if (pattern.state === 'active') {
+					const x1 = radiance.x;
+					const y1 = radiance.y;
+					for (const a of pattern.angles) {
+						const x2 = x1 + Math.cos(a) * 1300;
+						const y2 = y1 + Math.sin(a) * 1300;
+						const dist = pointToSegmentDistance(player.x, player.y - player.h * 0.5, x1, y1, x2, y2);
+						if (dist < 14) {
+							hitPlayer(8, 'Un láser te quema al atravesar la arena.');
+							break;
+						}
+					}
+
+					pattern.ttl -= dt;
+					if (pattern.ttl <= 0) {
+						hazards.laserPatterns.splice(i, 1);
+					}
 				}
 			}
 		}
@@ -464,7 +521,7 @@
 					y: radiance.y + Math.sin(angle) * 120,
 					vx: 0,
 					vy: 0,
-					r: 20,
+					r: 28,
 					speed: 3.8,
 					ttl: 6000
 				});
@@ -563,7 +620,7 @@
 			attackTime = 0;
 			hazards.vertical = [];
 			hazards.horizontal = [];
-			hazards.lasers = [];
+			hazards.laserPatterns = [];
 			hazards.curved = [];
 			cooldown.vertical = 0;
 			cooldown.horizontal = 0;
@@ -604,8 +661,8 @@
 
 		function drawRadiance() {
 			if (bossImg.complete && bossImg.naturalWidth > 0) {
-				const w = 220;
-				const h = 170;
+				const w = 480;
+				const h = 480;
 				ctx.drawImage(bossImg, radiance.x - w / 2, radiance.y - h / 2, w, h);
 			} else {
 				ctx.beginPath();
@@ -619,7 +676,11 @@
 			ctx.fillStyle = 'rgba(235, 235, 255, 0.95)';
 			hazards.vertical.forEach((s) => {
 				if (verticalSwordImg.complete && verticalSwordImg.naturalWidth > 0) {
-					ctx.drawImage(verticalSwordImg, s.x, s.y, s.w, s.h);
+					const drawW = s.w * 0.9;
+					const drawH = s.h * 2.0;
+					const drawX = s.x + (s.w - drawW) / 2;
+					const drawY = s.y - (drawH - s.h) * 0.98;
+					ctx.drawImage(verticalSwordImg, drawX, drawY, drawW, drawH);
 				} else {
 					ctx.fillRect(s.x, s.y, s.w, s.h);
 				}
@@ -627,7 +688,10 @@
 
 			ctx.fillStyle = 'rgba(250, 250, 255, 0.9)';
 			hazards.horizontal.forEach((s) => {
-				const sprite = s.vx >= 0 ? horizontalRightImg : horizontalLeftImg;
+				const variant = s.h >= 180 ? 3 : 2;
+				const sprite = s.vx >= 0
+					? (variant === 3 ? horizontalRightImg3 : horizontalRightImg2)
+					: (variant === 3 ? horizontalLeftImg3 : horizontalLeftImg2);
 				if (sprite.complete && sprite.naturalWidth > 0) {
 					ctx.drawImage(sprite, s.x, s.y, s.w, s.h);
 				} else {
@@ -635,15 +699,22 @@
 				}
 			});
 
-			hazards.lasers.forEach((l) => {
-				const x2 = radiance.x + Math.cos(l.a) * l.len;
-				const y2 = radiance.y + Math.sin(l.a) * l.len;
-				ctx.strokeStyle = 'rgba(255, 230, 180, 0.92)';
-				ctx.lineWidth = 4;
-				ctx.beginPath();
-				ctx.moveTo(radiance.x, radiance.y);
-				ctx.lineTo(x2, y2);
-				ctx.stroke();
+			hazards.laserPatterns.forEach((pattern) => {
+				if (pattern.state === 'warning' || pattern.state === 'active') {
+					ctx.save();
+					ctx.strokeStyle = pattern.state === 'warning' ? 'rgba(155, 235, 255, 0.75)' : 'rgba(255, 230, 180, 0.96)';
+					ctx.lineWidth = pattern.state === 'warning' ? 2 : 4;
+					ctx.setLineDash(pattern.state === 'warning' ? [14, 10] : []);
+					ctx.beginPath();
+					for (const a of pattern.angles) {
+						const x2 = radiance.x + Math.cos(a) * 1300;
+						const y2 = radiance.y + Math.sin(a) * 1300;
+						ctx.moveTo(radiance.x, radiance.y);
+						ctx.lineTo(x2, y2);
+					}
+					ctx.stroke();
+					ctx.restore();
+				}
 			});
 
 			ctx.fillStyle = 'rgba(255, 100, 100, 0.9)';
